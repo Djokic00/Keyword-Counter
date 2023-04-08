@@ -32,6 +32,59 @@ public class Main {
         int file_scanning_size_limit = Integer.parseInt(props.getProperty("file_scanning_size_limit"));
         int hop_count = Integer.parseInt(props.getProperty("hop_count"));
         long url_refresh_time = Long.parseLong(props.getProperty("url_refresh_time"));
+        Scanner scanner = new Scanner(System.in);
+
+        var resultRetriever = new ResultRetriever();
+
+        var fileScanThreadPool = new FileScanThreadPool(file_scanning_size_limit, keywords, resultRetriever);
+        var fileScanThread = new Thread(fileScanThreadPool);
+        fileScanThread.start();
+
+        var webScanThreadPool = new WebScanThreadPool();
+        var webScanThread = new Thread(webScanThreadPool);
+        webScanThread.start();
+
+        var jobDispatcher = new Thread(new JobDispatcher(jobQueue, fileScanThreadPool, webScanThreadPool));
+        jobDispatcher.start();
+
+        // /home/aleksa/Documents/Concurrency/kids_d1_data_primer/example/data
+
+        while (true) {
+            String userInput = scanner.nextLine();
+            String[] command = userInput.split(" ");
+
+            if (command.length > 2) {
+                System.out.println("Greska!");
+            }
+            else switch (command[0]) {
+                case "ad":
+                    String directoryPath = command[1];
+                    File directory = new File(directoryPath);
+                    if (directory.exists() && directory.isDirectory()) {
+                        System.out.println("The directory exists!");
+                    } else {
+                        System.out.println("The directory does not exist!");
+                    }
+                    var thread = new Thread(new DirectoryCrawler(file_corpus_prefix, dir_crawler_sleep_time, jobQueue, directory));
+                    thread.start();
+                    break;
+                case "aw":
+                    break;
+                case "get":
+                    break;
+                case "query":
+
+                    break;
+                case "cfs":
+                    break;
+                case "cws":
+                    break;
+                case "stop":
+                    break;
+                default:
+                    System.out.println("Greska!");
+            }
+        }
 
     }
 }

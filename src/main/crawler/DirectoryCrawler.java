@@ -36,9 +36,12 @@ public class DirectoryCrawler implements Runnable {
                 Long lastModified = getLastModified(corpusDir);
                 Long previousModified = lastModifiedMap.get(lastModifiedFile);
 
-                if (previousModified == null || lastModified >= previousModified) {
+                System.out.println("Last: " + lastModified + " " + "Prev: " + previousModified);
+
+                if (previousModified == null || lastModified > previousModified) {
                     try {
                         jobQueue.put(new Job(ScanType.FILE, corpusDir.getAbsolutePath()));
+                        lastModifiedMap.put(lastModifiedFile, lastModified);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -64,17 +67,10 @@ public class DirectoryCrawler implements Runnable {
                         findTextCorpora(file);
                     }
                     findTextCorpora(file);
-                } else if (isTextCorpus(file) && file.getParentFile().getName().startsWith(directoryPrefix)) {
-                    lastModifiedMap.put(file, file.lastModified());
                 }
             }
         }
         return textCorpora;
-    }
-
-    private boolean isTextCorpus(File file) {
-        String fileName = file.getName();
-        return fileName.endsWith(".txt");
     }
 
     private Long getLastModified(File directory) {

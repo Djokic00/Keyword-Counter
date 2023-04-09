@@ -29,24 +29,47 @@ public class FileScanThreadPool implements ScanThreadPool, Runnable {
     public void scheduleJob(ScanningJob job) {
         String directoryPath = job.getQuery();
         File directory = new File(directoryPath);
-//        long directorySize = getDirectorySize(directory);
+        long directorySize = getDirectorySize(directory);
 
         File[] listFiles = directory.listFiles();
 
+        System.out.println();
         System.out.println("Schedule Job");
-        Future<Map<String, Integer>> totalOccurrencesFuture = pool.submit(new FileProcessor(corpusSizeLimit, listFiles, keywords));
+        System.out.println("Velicina fajla "  + directorySize);
+        System.out.println("---------------------");
+        Future<Map<String, Integer>> totalOccurrencesFuture = pool.submit(new FileProcessor(0, directorySize, corpusSizeLimit, listFiles, keywords));
 
         try {
             Map<String, Integer> totalOccurrences = totalOccurrencesFuture.get();
             for (Map.Entry<String, Integer> entry : totalOccurrences.entrySet()) {
                 System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
             }
+            System.out.println();
 
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private long getDirectorySize(File directory) {
+        long numberOfBytes = 0;
+        if (directory.isDirectory()) {
+            File[] fileList = directory.listFiles();
+            if (fileList != null) {
+                for (File file : fileList) {
+                    if (!file.isDirectory())
+                        numberOfBytes += file.length();
+                    if (file.isDirectory()) {
+                        numberOfBytes += getDirectorySize(file);
+                    }
+                }
+            }
+        } else {
+            numberOfBytes += directory.length();
+        }
+        return numberOfBytes;
     }
 }
 

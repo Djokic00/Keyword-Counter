@@ -1,6 +1,6 @@
 package main.scanners;
 
-import java.io.File;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.RecursiveTask;
@@ -12,53 +12,70 @@ public class FileProcessor extends RecursiveTask {
     private File[] files;
     private final List<String> keywords;
 
-    public FileProcessor(long corpusSizeLimit, File[] files, List<String> keywords) {
+    public FileProcessor(long start, long end, long corpusSizeLimit, File[] files, List<String> keywords) {
+        this.start = start;
+        this.end = end;
         this.corpusSizeLimit = corpusSizeLimit;
         this.files = files;
         this.keywords = keywords;
     }
 
-    private Map<String, Integer> countOccurrences(File file, List<String> keywords) throws Exception {
+    private Map<String, Integer> countOccurrences(Object input, List<String> keywords) throws Exception {
         Map<String, Integer> occurrences = new HashMap<>();
-        try (Scanner scanner = new Scanner(file)) {
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                for (String keyword : keywords) {
-                    occurrences.put(keyword, countKeywordOccurrences(line, keyword));
-                }
+        for (String key : keywords) {
+            occurrences.put(key, 0);
+        }
+
+        Scanner scanner;
+        if (input instanceof File) {
+            scanner = new Scanner((File) input);
+        } else if (input instanceof byte[]) {
+            scanner = new Scanner(new String((byte[]) input));
+        } else {
+            throw new IllegalArgumentException("Invalid input type: " + input.getClass());
+        }
+
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine();
+            for (String keyword : keywords) {
+                int currentValue = occurrences.get(keyword);
+                occurrences.put(keyword, currentValue + countKeywordOccurrences(line, keyword));
             }
         }
+        scanner.close();
         return occurrences;
     }
-
     private int countKeywordOccurrences(String line, String keyword) {
-        int occurrences = 0;
-        int index = line.indexOf(keyword);
-        while (index >= 0) {
-            occurrences++;
-            index = line.indexOf(keyword, index + keyword.length());
+        int count = 0;
+        String[] words = line.split(" ");
+        for (String word : words) {
+            if (word.equals(keyword)) {
+                count++;
+            }
         }
-        return occurrences;
+        return count;
     }
 
     @Override
     protected Object compute() {
         Map<String, Integer> result = new HashMap<>();
+        for (String key: keywords) {
+            result.put(key, 0);
+        }
 
-        System.out.println(files[0].getParentFile().getName());
-        long directorySize = getDirectorySize(files[0].getParentFile());
-        // nismo sigurni za ovo
-        System.out.println("FILES length: " + files.length);
-        if (directorySize <= corpusSizeLimit) {
-            System.out.println("File Processor - Usao u if");
-            long sum = 0;
+        if (end - start <= corpusSizeLimit) {
+            Map<String, Integer> map;
             for (File file : files) {
-                sum += file.length();
-                if (sum > corpusSizeLimit) {
-                    break;
-                }
                 try {
-                    Map<String, Integer> map = countOccurrences(file, keywords);
+                    if (files.length == 1) {
+                        RandomAccessFile raf = new RandomAccessFile(file.getAbsolutePath(), "r");
+                        byte[] bytes = new byte[(int) (end - start)];
+                        raf.seek(start); // Move the file pointer to the Xth byte
+                        raf.readFully(bytes);
+                        map = countOccurrences(bytes, keywords);
+                    } else {
+                        map = countOccurrences(file, keywords);
+                    }
                     for (String key : map.keySet()) {
                         int value1 = map.get(key);
                         int value2 = result.get(key);
@@ -69,19 +86,27 @@ public class FileProcessor extends RecursiveTask {
                 }
             }
         } else {
-            System.out.println("USAO U ELSE");
-            int mid = files.length / 2;
+            FileProcessor left;
+            FileProcessor right;
 
-            FileProcessor left = new FileProcessor(corpusSizeLimit, Arrays.copyOfRange(files, 0, mid), keywords);
-            FileProcessor right = new FileProcessor(corpusSizeLimit, Arrays.copyOfRange(files, mid, files.length), keywords);
+            // divide by number of files
+            if (files.length > 1) {
+                int mid = files.length / 2;
+                long endLeft = sizeOfFiles(0, mid);
+                long endRight = sizeOfFiles(mid, files.length);
+                left = new FileProcessor(0, endLeft, corpusSizeLimit, Arrays.copyOfRange(files, 0, mid), keywords);
+                right = new FileProcessor(0, endRight, corpusSizeLimit, Arrays.copyOfRange(files, mid, files.length), keywords);
+            }
+            else { // divide by size
+                long mid = ((end - start) / 2) + start;
+                left = new FileProcessor(start, mid, corpusSizeLimit, files, keywords);
+                right = new FileProcessor(mid, end, corpusSizeLimit, files, keywords);
+            }
 
-            // ovim pravimo novu nit koja ce da se bavi levim poslom
             left.fork();
 
-            //ova nit koja je i podelila posao racuna svoj, desni deo posla
             Map<String, Integer> rightResult = (Map<String, Integer> ) right.compute();
 
-            //dohvatamo sta je rezultat leve, nove, niti
             Map<String, Integer> leftResult = (Map<String, Integer> ) left.join();
 
             for (String key : rightResult.keySet()) {
@@ -93,22 +118,15 @@ public class FileProcessor extends RecursiveTask {
         return result;
     }
 
-    private long getDirectorySize(File directory) {
-        long numberOfBytes = 0;
-        if (directory.isDirectory()) {
-            File[] fileList = directory.listFiles();
-            if (fileList != null) {
-                for (File file : fileList) {
-                    if (!file.isDirectory())
-                        numberOfBytes += file.length();
-                    if (file.isDirectory()) {
-                        numberOfBytes += getDirectorySize(file);
-                    }
-                }
-            }
-        } else {
-            numberOfBytes += directory.length();
+    private long sizeOfFiles(int start, int end) {
+        long sum = 0;
+        for (int i = start; i < end; i++) {
+            sum += files[i].length();
         }
-        return numberOfBytes;
+        return sum;
     }
+
 }
+
+// end je zbirna velicina fajlova ako se salje copyOfRange i start je 0
+// ako imamo samo jedan fajl onda to delimo binarnom

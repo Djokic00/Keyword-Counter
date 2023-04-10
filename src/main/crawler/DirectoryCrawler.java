@@ -1,55 +1,78 @@
 package main.crawler;
 
+import main.enums.JobStatus;
 import main.job.Job;
 import main.enums.ScanType;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 
 public class DirectoryCrawler implements Runnable {
 
-    private final String directoryPrefix;
-    private final long dirCrawlerSleepTime;
+    private String directoryPrefix;
+    private long dirCrawlerSleepTime;
     private final Map<File, Long> lastModifiedMap = new HashMap<>();
     private List<File> textCorpora = new ArrayList<>();
     private LinkedBlockingQueue<Job> jobQueue;
     private File lastModifiedFile;
+    private File directory = null;
+    private final Semaphore semaphore = new Semaphore(1);
+    private volatile File newDirectory = null;
+    private volatile boolean isRunning = true;
 
-    private File directory;
-
-    public DirectoryCrawler(String directoryPrefix, long dirCrawlerSleepTime, LinkedBlockingQueue<Job> jobQueue, File directory) {
+    public DirectoryCrawler(String directoryPrefix, long dirCrawlerSleepTime, LinkedBlockingQueue<Job> jobQueue) {
         this.directoryPrefix = directoryPrefix;
         this.dirCrawlerSleepTime = dirCrawlerSleepTime;
         this.jobQueue = jobQueue;
-        this.directory = directory;
     }
 
     @Override
     public void run() {
-        while (!Thread.currentThread().isInterrupted()) {
-            textCorpora = new ArrayList<>();
-            List<File> textCorpora = findTextCorpora(directory);
+        while (true) {
+            if (!isRunning) {
+                try {
+                    jobQueue.put(new Job(ScanType.FILE, "", JobStatus.STOPPED));
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                break;
+            }
 
-            for (File corpusDir : textCorpora) {
-                Long lastModified = getLastModified(corpusDir);
-                Long previousModified = lastModifiedMap.get(lastModifiedFile);
+            try {
+                semaphore.acquire();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
 
-                System.out.println("Last: " + lastModified + " " + "Prev: " + previousModified);
+            if (newDirectory != null) {
+                directory = newDirectory;
+                newDirectory = null;
+            }
 
-                if (previousModified == null || lastModified > previousModified) {
-                    try {
-                        jobQueue.put(new Job(ScanType.FILE, corpusDir.getAbsolutePath()));
-                        lastModifiedMap.put(lastModifiedFile, lastModified);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
+            semaphore.release();
+
+            if (directory != null) {
+                List<File> textCorpora = findTextCorpora(directory);
+                for (File corpusDir : textCorpora) {
+                    Long lastModified = getLastModified(corpusDir);
+                    Long previousModified = lastModifiedMap.get(lastModifiedFile);
+
+//                System.out.println("Last: " + lastModified + " " + "Prev: " + previousModified);
+
+                    if (previousModified == null || lastModified > previousModified) {
+                        try {
+                            jobQueue.put(new Job(ScanType.FILE, corpusDir.getAbsolutePath(), JobStatus.RUNNING));
+                            lastModifiedMap.put(lastModifiedFile, lastModified);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                        lastModifiedMap.put(corpusDir, lastModified);
                     }
-                    lastModifiedMap.put(corpusDir, lastModified);
                 }
             }
 
-            // Sleep for the specified interval before continuing the search
             try {
                 Thread.sleep(dirCrawlerSleepTime);
             } catch (InterruptedException e) {
@@ -85,6 +108,21 @@ public class DirectoryCrawler implements Runnable {
             }
         }
         return lastModified;
+    }
+
+    public void setDirectory(File directory) {
+        try {
+            semaphore.acquire();
+            newDirectory = directory;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            semaphore.release();
+        }
+    }
+
+    public void stopThread() {
+        isRunning = false;
     }
 }
 

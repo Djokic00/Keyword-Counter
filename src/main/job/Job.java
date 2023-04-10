@@ -2,16 +2,16 @@ package main.job;
 
 import main.enums.ScanType;
 
-import java.util.Map;
-import java.util.concurrent.Future;
-
 public class Job implements ScanningJob {
     private ScanType scanType;
     private String query;
 
-    public Job(ScanType scanType, String query) {
+    private volatile boolean isRunning;
+
+    public Job(ScanType scanType, String query, boolean isRunning) {
         this.scanType = scanType;
         this.query = query;
+        this.isRunning = isRunning;
     }
 
     @Override
@@ -25,8 +25,8 @@ public class Job implements ScanningJob {
     }
 
     @Override
-    public Future<Map<String, Integer>> initiate() {
-        return null;
+    public boolean isRunning() {
+        return isRunning;
     }
 
 }

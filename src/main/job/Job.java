@@ -1,17 +1,17 @@
 package main.job;
 
+import main.enums.CurrentStatus;
 import main.enums.ScanType;
 
 public class Job implements ScanningJob {
     private ScanType scanType;
     private String query;
+    private CurrentStatus currentStatus;
 
-    private volatile boolean isRunning;
-
-    public Job(ScanType scanType, String query, boolean isRunning) {
+    public Job(ScanType scanType, String query, CurrentStatus currentStatus) {
         this.scanType = scanType;
         this.query = query;
-        this.isRunning = isRunning;
+        this.currentStatus = currentStatus;
     }
 
     @Override
@@ -25,8 +25,8 @@ public class Job implements ScanningJob {
     }
 
     @Override
-    public boolean isRunning() {
-        return isRunning;
+    public CurrentStatus getCurrentStatus() {
+        return currentStatus;
     }
 
 }

@@ -47,7 +47,7 @@ public class FileProcessor extends RecursiveTask {
     }
     private int countKeywordOccurrences(String line, String keyword) {
         int count = 0;
-        String[] words = line.split(" ");
+        String[] words = line.split("\\W");
         for (String word : words) {
             if (word.equals(keyword)) {
                 count++;

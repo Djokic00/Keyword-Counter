@@ -2,31 +2,34 @@ package main.scanners;
 
 import main.job.ScanningJob;
 import main.result.ResultRetriever;
+import main.result.ResultRetrieverImpl;
 
 import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class FileScanThreadPool implements ScanThreadPool, Runnable {
+public class FileScanThreadPool implements ScanThreadPool {
     private final int corpusSizeLimit;
     private final List<String> keywords;
-    private final ResultRetriever resultRetriever;
+    private final BlockingQueue<Future<Map<String, Integer>>> resultQueue;
     ForkJoinPool pool;
 
-    public FileScanThreadPool(int corpusSizeLimit, List<String> keywords, ResultRetriever resultRetriever) {
+    public FileScanThreadPool(int corpusSizeLimit, List<String> keywords, BlockingQueue<Future<Map<String, Integer>>> resultQueue) {
         this.corpusSizeLimit = corpusSizeLimit;
         this.keywords = keywords;
-        this.resultRetriever = resultRetriever;
-    }
-
-    @Override
-    public void run() {
-         pool = new ForkJoinPool();
+        this.resultQueue = resultQueue;
+        pool = new ForkJoinPool();
     }
 
     @Override
     public void scheduleJob(ScanningJob job) {
+        if (!job.isRunning()) {
+            System.out.println("Usao u break u File Scanner");
+            pool.shutdown();
+            return;
+        }
         String directoryPath = job.getQuery();
         File directory = new File(directoryPath);
         long directorySize = getDirectorySize(directory);
@@ -39,16 +42,16 @@ public class FileScanThreadPool implements ScanThreadPool, Runnable {
         System.out.println("---------------------");
         Future<Map<String, Integer>> totalOccurrencesFuture = pool.submit(new FileProcessor(0, directorySize, corpusSizeLimit, listFiles, keywords));
 
+
         try {
-            Map<String, Integer> totalOccurrences = totalOccurrencesFuture.get();
-            for (Map.Entry<String, Integer> entry : totalOccurrences.entrySet()) {
+            Map<String, Integer> mapa = totalOccurrencesFuture.get();
+            for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
                 System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
             }
-            System.out.println();
-
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
+            resultQueue.put(totalOccurrencesFuture);
         } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
@@ -71,5 +74,9 @@ public class FileScanThreadPool implements ScanThreadPool, Runnable {
         }
         return numberOfBytes;
     }
+
+//    public void stopThread() {
+//        isRunning.set(false);
+//    }
 }
 

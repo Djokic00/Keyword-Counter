@@ -1,17 +1,17 @@
 package main.job;
 
-import main.enums.CurrentStatus;
+import main.enums.JobStatus;
 import main.enums.ScanType;
 
 public class Job implements ScanningJob {
     private ScanType scanType;
     private String query;
-    private CurrentStatus currentStatus;
+    private JobStatus jobStatus;
 
-    public Job(ScanType scanType, String query, CurrentStatus currentStatus) {
+    public Job(ScanType scanType, String query, JobStatus jobStatus) {
         this.scanType = scanType;
         this.query = query;
-        this.currentStatus = currentStatus;
+        this.jobStatus = jobStatus;
     }
 
     @Override
@@ -25,8 +25,8 @@ public class Job implements ScanningJob {
     }
 
     @Override
-    public CurrentStatus getCurrentStatus() {
-        return currentStatus;
+    public JobStatus getJobStatus() {
+        return jobStatus;
     }
 
 }

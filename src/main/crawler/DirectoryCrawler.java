@@ -1,8 +1,9 @@
 package main.crawler;
 
 import main.enums.JobStatus;
-import main.job.Job;
+import main.job.FileJob;
 import main.enums.ScanType;
+import main.job.ScanningJob;
 
 import java.io.File;
 import java.util.*;
@@ -15,14 +16,14 @@ public class DirectoryCrawler implements Runnable {
     private long dirCrawlerSleepTime;
     private final Map<File, Long> lastModifiedMap = new HashMap<>();
     private List<File> textCorpora = new ArrayList<>();
-    private LinkedBlockingQueue<Job> jobQueue;
+    private LinkedBlockingQueue<ScanningJob> jobQueue;
     private File lastModifiedFile;
     private File directory = null;
     private final Semaphore semaphore = new Semaphore(1);
     private volatile File newDirectory = null;
     private volatile boolean isRunning = true;
 
-    public DirectoryCrawler(String directoryPrefix, long dirCrawlerSleepTime, LinkedBlockingQueue<Job> jobQueue) {
+    public DirectoryCrawler(String directoryPrefix, long dirCrawlerSleepTime, LinkedBlockingQueue<ScanningJob> jobQueue) {
         this.directoryPrefix = directoryPrefix;
         this.dirCrawlerSleepTime = dirCrawlerSleepTime;
         this.jobQueue = jobQueue;
@@ -33,7 +34,7 @@ public class DirectoryCrawler implements Runnable {
         while (true) {
             if (!isRunning) {
                 try {
-                    jobQueue.put(new Job(ScanType.FILE, "", JobStatus.STOPPED));
+                    jobQueue.put(new FileJob(ScanType.FILE, "", JobStatus.STOPPED));
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -63,7 +64,7 @@ public class DirectoryCrawler implements Runnable {
 
                     if (previousModified == null || lastModified > previousModified) {
                         try {
-                            jobQueue.put(new Job(ScanType.FILE, corpusDir.getAbsolutePath(), JobStatus.RUNNING));
+                            jobQueue.put(new FileJob(ScanType.FILE, corpusDir.getAbsolutePath(), JobStatus.RUNNING));
                             lastModifiedMap.put(lastModifiedFile, lastModified);
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);

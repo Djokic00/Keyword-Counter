@@ -1,18 +1,19 @@
 package main.dispatcher;
 
+import main.enums.JobStatus;
 import main.job.ScanningJob;
 import main.enums.ScanType;
-import main.job.Job;
+import main.job.WebJob;
 import main.scanners.file_scanner.FileScanThreadPool;
 import main.scanners.web_scanner.WebScanThreadPool;
 import java.util.concurrent.*;
 
 public class JobDispatcher implements Runnable {
-    private final BlockingQueue<Job> jobQueue;
+    private final BlockingQueue<ScanningJob> jobQueue;
     private final FileScanThreadPool fileThreadPool;
     private final WebScanThreadPool webThreadPool;
     private volatile boolean isRunning = true;
-    public JobDispatcher(LinkedBlockingQueue<Job> jobQueue, FileScanThreadPool fileThreadPool, WebScanThreadPool webThreadPool) {
+    public JobDispatcher(LinkedBlockingQueue<ScanningJob> jobQueue, FileScanThreadPool fileThreadPool, WebScanThreadPool webThreadPool) {
         this.jobQueue = jobQueue;
         this.fileThreadPool = fileThreadPool;
         this.webThreadPool = webThreadPool;
@@ -21,20 +22,28 @@ public class JobDispatcher implements Runnable {
     @Override
     public void run() {
         while (true) {
+            ScanningJob job;
             try {
-                ScanningJob job = jobQueue.take();
+                job = jobQueue.take();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+
+            if (!isRunning) {
+                job.setJobStatus(JobStatus.STOPPED);
+                fileThreadPool.scheduleJob(job);
+                WebJob webJob = new WebJob(ScanType.WEB, "", JobStatus.STOPPED, 0);
+                webThreadPool.scheduleJob(webJob);
+                System.out.println("Usao u break u Job Dispatcher");
+                break;
+            }
+            else {
                 if (job.getType() == ScanType.FILE) {
                     fileThreadPool.scheduleJob(job);
                 } else if (job.getType() == ScanType.WEB) {
                     webThreadPool.scheduleJob(job);
                 }
-                if (!isRunning) {
-                    System.out.println("Usao u break u Job Dispatcher");
-                    break;
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
             }
         }
     }

@@ -135,8 +135,4 @@ public class FileProcessor extends RecursiveTask {
         }
         return sum;
     }
-
 }
-
-// end je zbirna velicina fajlova ako se salje copyOfRange i start je 0
-// ako imamo samo jedan fajl onda to delimo binarnom

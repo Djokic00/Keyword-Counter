@@ -1,8 +1,7 @@
-package main.scanners;
+package main.scanners.file_scanner;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.concurrent.RecursiveTask;
 
 public class FileProcessor extends RecursiveTask {
@@ -58,10 +57,12 @@ public class FileProcessor extends RecursiveTask {
 
     @Override
     protected Object compute() {
-        Map<String, Integer> result = new HashMap<>();
+        Map<String, Map<String, Integer>> result = new HashMap<>();
+        Map<String, Integer> innerMap = new HashMap<>();
         for (String key: keywords) {
-            result.put(key, 0);
+            innerMap.put(key, 0);
         }
+        result.put(files[0].getParentFile().getName(), innerMap);
 
         if (end - start <= corpusSizeLimit) {
             Map<String, Integer> map;
@@ -76,11 +77,13 @@ public class FileProcessor extends RecursiveTask {
                     } else {
                         map = countOccurrences(file, keywords);
                     }
+                    Map<String, Integer> currentValues = new HashMap<>();
                     for (String key : map.keySet()) {
                         int value1 = map.get(key);
-                        int value2 = result.get(key);
-                        result.put(key, value1 + value2);
+                        int value2 = result.get(file.getParentFile().getName()).get(key);
+                        currentValues.put(key, value1 + value2);
                     }
+                    result.put(file.getParentFile().getName(), currentValues);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -105,14 +108,21 @@ public class FileProcessor extends RecursiveTask {
 
             left.fork();
 
-            Map<String, Integer> rightResult = (Map<String, Integer> ) right.compute();
+            Map<String, Map<String, Integer>> rightResult = (Map<String, Map<String, Integer>>) right.compute();
 
-            Map<String, Integer> leftResult = (Map<String, Integer> ) left.join();
+            Map<String, Map<String, Integer>> leftResult = (Map<String, Map<String, Integer>>) left.join();
 
             for (String key : rightResult.keySet()) {
-                int value1 = rightResult.get(key);
-                int value2 = leftResult.get(key);
-                result.put(key, value1 + value2);
+                Map<String, Integer> value1 = rightResult.get(key);
+                Map<String, Integer> value2 = leftResult.get(key);
+
+                Map<String, Integer> newMap = new HashMap<>();
+                for (String entry : value1.keySet()) {
+                    int valueFromFirstMap = value1.get(entry);
+                    int valueFromSecondMap = value2.get(entry);
+                    newMap.put(entry, valueFromFirstMap + valueFromSecondMap);
+                }
+                result.put(key, newMap);
             }
         }
         return result;

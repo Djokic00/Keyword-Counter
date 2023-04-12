@@ -32,52 +32,41 @@ public class DirectoryCrawler implements Runnable {
     @Override
     public void run() {
         while (true) {
-            if (!isRunning) {
-                try {
-                    jobQueue.put(new FileJob(ScanType.FILE, "", JobStatus.STOPPED));
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                break;
-            }
-
             try {
+                if (!isRunning) {
+                    jobQueue.put(new FileJob(ScanType.FILE, "", JobStatus.STOPPED));
+                    break;
+                }
                 semaphore.acquire();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
 
-            if (newDirectory != null) {
-                directory = newDirectory;
-                newDirectory = null;
-            }
+                if (newDirectory != null) {
+                    directory = newDirectory;
+                    newDirectory = null;
+                }
 
-            semaphore.release();
+                semaphore.release();
 
-            if (directory != null) {
-                List<File> textCorpora = findTextCorpora(directory);
-                for (File corpusDir : textCorpora) {
-                    Long lastModified = getLastModified(corpusDir);
-                    Long previousModified = lastModifiedMap.get(lastModifiedFile);
-
-//                System.out.println("Last: " + lastModified + " " + "Prev: " + previousModified);
-
-                    if (previousModified == null || lastModified > previousModified) {
-                        try {
-                            jobQueue.put(new FileJob(ScanType.FILE, corpusDir.getAbsolutePath(), JobStatus.RUNNING));
-                            lastModifiedMap.put(lastModifiedFile, lastModified);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
+                if (directory != null) {
+                    List<File> textCorpora = findTextCorpora(directory);
+                    for (File corpusDir : textCorpora) {
+                        Long lastModified = getLastModified(corpusDir);
+                        Long previousModified = lastModifiedMap.get(lastModifiedFile);
+                        if (previousModified == null || lastModified > previousModified) {
+                            try {
+                                jobQueue.put(new FileJob(ScanType.FILE, corpusDir.getAbsolutePath(), JobStatus.RUNNING));
+                                lastModifiedMap.put(lastModifiedFile, lastModified);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                            lastModifiedMap.put(corpusDir, lastModified);
                         }
-                        lastModifiedMap.put(corpusDir, lastModified);
                     }
                 }
-            }
 
-            try {
                 Thread.sleep(dirCrawlerSleepTime);
+
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
             }
         }
     }

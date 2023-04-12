@@ -35,7 +35,7 @@ public class JobDispatcher implements Runnable {
                 fileThreadPool.scheduleJob(job);
                 WebJob webJob = new WebJob(ScanType.WEB, "", JobStatus.STOPPED, 0);
                 webThreadPool.scheduleJob(webJob);
-                System.out.println("Usao u break u Job Dispatcher");
+                System.out.println("JobDispatcher is shutting down");
                 break;
             }
             else {

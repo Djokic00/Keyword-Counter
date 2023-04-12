@@ -7,4 +7,5 @@ public interface ScanningJob {
     ScanType getType();
     String getQuery();
     JobStatus getJobStatus();
+    void setJobStatus(JobStatus jobStatus);
 }

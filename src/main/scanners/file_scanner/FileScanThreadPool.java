@@ -28,7 +28,7 @@ public class FileScanThreadPool implements ScanThreadPool {
     public void scheduleJob(ScanningJob job) {
         FileJob fileJob = (FileJob) job;
         if (fileJob.getJobStatus() == JobStatus.STOPPED) {
-            System.out.println("Usao u break u File Scanner");
+            System.out.println("FileScanner is shutting down");
             pool.shutdown();
             return;
         }
@@ -39,13 +39,11 @@ public class FileScanThreadPool implements ScanThreadPool {
         File[] listFiles = directory.listFiles();
 
         System.out.println();
-        System.out.println("Schedule Job");
-        System.out.println("Velicina fajla "  + directorySize);
+        System.out.println("Processing files");
         System.out.println("---------------------");
         Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture = pool.submit(new FileProcessor(0, directorySize, corpusSizeLimit, listFiles, keywords));
 
-
-        System.out.println("Filescan: " + directoryPath);
+        System.out.println("File: " + directoryPath + ", file size: " + directorySize);
         retrieverThreadPool.addFileResult(directory.getName(), totalOccurrencesFuture);
     }
 

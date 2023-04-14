@@ -15,7 +15,7 @@ public class FileScanThreadPool implements ScanThreadPool {
     private final int corpusSizeLimit;
     private final List<String> keywords;
     private ResultRetrieverThreadPool retrieverThreadPool;
-    ForkJoinPool pool;
+    private ForkJoinPool pool;
 
     public FileScanThreadPool(int corpusSizeLimit, List<String> keywords, ResultRetrieverThreadPool retrieverThreadPool) {
         this.corpusSizeLimit = corpusSizeLimit;
@@ -38,9 +38,6 @@ public class FileScanThreadPool implements ScanThreadPool {
 
         File[] listFiles = directory.listFiles();
 
-        System.out.println();
-        System.out.println("Processing files");
-        System.out.println("---------------------");
         Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture = pool.submit(new FileProcessor(0, directorySize, corpusSizeLimit, listFiles, keywords));
 
         System.out.println("File: " + directoryPath + ", file size: " + directorySize);

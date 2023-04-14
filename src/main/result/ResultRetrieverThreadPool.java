@@ -23,7 +23,6 @@ public class ResultRetrieverThreadPool implements ResultRetriever {
         this.pool = Executors.newCachedThreadPool();
         this.executor = Executors.newScheduledThreadPool(5);
         this.url_refresh_time = url_refresh_time;
-//        deleteScannedUrls();
     }
 
     public void addFileResult(String directoryPath, Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture) {

@@ -1,7 +1,5 @@
 package main.result;
 
-import main.enums.ScanType;
-
 import java.util.Map;
 import java.util.concurrent.Future;
 

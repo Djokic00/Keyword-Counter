@@ -1,41 +1,41 @@
-package main.scanners;
+package main.scanners.web_scanner;
 
+import main.enums.JobStatus;
 import main.job.ScanningJob;
+import main.job.WebJob;
+import main.result.ResultRetrieverThreadPool;
+import main.scanners.ScanThreadPool;
 
-import java.io.File;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 public class WebScanThreadPool implements ScanThreadPool {
-    ExecutorService pool = Executors.newCachedThreadPool();
-    int hopCount;
-    long urlRefreshRate;
-    List<String> keywords;
+    private ExecutorService pool = Executors.newCachedThreadPool();
+    public ConcurrentHashMap<String, Boolean> processedLinks = new ConcurrentHashMap<>();
+    BlockingQueue jobQueue;
+    private ResultRetrieverThreadPool retrieverThreadPool;
 
-    public WebScanThreadPool(int hopCount, long urlRefreshRate, List<String> keywords) {
-        this.hopCount = hopCount;
-        this.urlRefreshRate = urlRefreshRate;
+    private List<String> keywords;
+
+    public WebScanThreadPool(BlockingQueue jobQueue, ResultRetrieverThreadPool retrieverThreadPool, List<String> keywords) {
+        this.jobQueue = jobQueue;
+        this.retrieverThreadPool = retrieverThreadPool;
         this.keywords = keywords;
     }
-
     @Override
     public void scheduleJob(ScanningJob job) {
-        if (!job.isRunning()) {
-            System.out.println("Usao u break u File Scanner");
+        WebJob webJob = (WebJob) job;
+        if (webJob.getJobStatus() == JobStatus.STOPPED) {
+            System.out.println("Web scanner is shutting down");
             pool.shutdown();
             return;
         }
-        String url = job.getQuery();
+        String url = webJob.getQuery();
+        int hopCount = webJob.getHopCount();
 
-        System.out.println();
-        System.out.println("Schedule Job in Web");
-        System.out.println("---------------------");
+        Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture = pool.submit(new WebProcessor(jobQueue, this, hopCount, url, keywords ));
 
-        Future<Map<String, Integer>> totalOccurrencesFuture = pool.submit(new WebProcessor(hopCount, urlRefreshRate, url, keywords));
-
+        retrieverThreadPool.addWebResult(url, totalOccurrencesFuture);
     }
 }

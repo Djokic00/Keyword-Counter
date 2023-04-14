@@ -1,21 +1,21 @@
-package main.result;
+package main.result.web_result;
 
 import main.scanners.web_scanner.WebScanThreadPool;
 
 public class DeleteScannedURL implements Runnable {
-    private ResultRetrieverThreadPool retrieverThreadPool;
+    private WebRetriever webRetriever;
     private WebScanThreadPool webScanThreadPool;
 
-    public DeleteScannedURL(ResultRetrieverThreadPool retrieverThreadPool, WebScanThreadPool webScanThreadPool) {
-        this.retrieverThreadPool = retrieverThreadPool;
+    public DeleteScannedURL(WebRetriever webRetriever, WebScanThreadPool webScanThreadPool) {
+        this.webRetriever = webRetriever;
         this.webScanThreadPool = webScanThreadPool;
     }
 
     @Override
     public void run() {
 //        System.out.println("Brisanje rezultata");
-        retrieverThreadPool.setResultSummaryCacheWeb(null);
-        retrieverThreadPool.webResults.clear();
+        webRetriever.setResultSummaryCacheWeb(null);
+        webRetriever.webResults.clear();
         webScanThreadPool.processedLinks.clear();
     }
 }

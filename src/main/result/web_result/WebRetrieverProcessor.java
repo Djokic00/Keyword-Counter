@@ -1,6 +1,4 @@
-package main.result;
-
-import main.enums.ScanType;
+package main.result.web_result;
 
 import java.net.URL;
 import java.util.HashMap;
@@ -9,32 +7,15 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
-public class ResultRetrieverProcessor implements Callable {
-    private ScanType scanType;
-    private final ConcurrentHashMap<String, Future<Map<String, Map<String, Integer>>>> fileResults;
+public class WebRetrieverProcessor implements Callable {
     private final ConcurrentHashMap<String, Future<Map<String, Map<String, Integer>>>> webResults;
 
-    public ResultRetrieverProcessor(ScanType scanType, ConcurrentHashMap<String, Future<Map<String, Map<String, Integer>>>> fileResults,
-                                    ConcurrentHashMap<String, Future<Map<String, Map<String, Integer>>>> webResults) {
-        this.scanType = scanType;
-        this.fileResults = fileResults;
+    public WebRetrieverProcessor(ConcurrentHashMap<String, Future<Map<String, Map<String, Integer>>>> webResults) {
         this.webResults = webResults;
     }
 
-    public Map<String, Map<String, Integer>> summaryFile(){
-        Map<String, Map<String, Integer>> result = new HashMap<>();
-        for (String key: fileResults.keySet()) {
-            Future<Map<String, Map<String, Integer>>> future = fileResults.get(key);
-            try {
-                result.put(key, future.get().get(key));
-            } catch (Exception e) {
-
-            }
-        }
-        return result;
-    }
-
-    public Map<String, Map<String, Integer>> summaryWeb() {
+    @Override
+    public Object call() {
         Map<String, Map<String, Integer>> result = new HashMap<>();
         for (String key: webResults.keySet()) {
             try {
@@ -65,21 +46,6 @@ public class ResultRetrieverProcessor implements Callable {
             } catch (Exception e) {
 
             }
-        }
-        return result;
-    }
-
-
-    @Override
-    public Object call() {
-        Map<String, Map<String, Integer>> result = new HashMap<>();
-        if (scanType.equals(ScanType.WEB)) {
-            result = this.summaryWeb();
-            return result;
-        }
-        if (scanType.equals(ScanType.FILE)) {
-            result =  this.summaryFile();
-            return result;
         }
         return result;
     }

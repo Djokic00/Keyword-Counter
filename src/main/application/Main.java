@@ -21,31 +21,16 @@ public class Main {
     public static void main(String[] args) {
         var jobQueue = new LinkedBlockingQueue<ScanningJob>();
 
-        Properties props = new Properties();
-        try {
-            InputStream input = new FileInputStream("src/resources/app.properties");
-            props.load(input);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-
-        List<String> keywords =  Arrays.asList(props.getProperty("keywords").split(","));
-        String file_corpus_prefix = props.getProperty("file_corpus_prefix");
-        int dir_crawler_sleep_time = Integer.parseInt(props.getProperty("dir_crawler_sleep_time"));
-        int file_scanning_size_limit = Integer.parseInt(props.getProperty("file_scanning_size_limit"));
-        int hop_count = Integer.parseInt(props.getProperty("hop_count"));
-        long url_refresh_time = Long.parseLong(props.getProperty("url_refresh_time"));
-
         // Component initialization
-        var directoryCrawler = new DirectoryCrawler(file_corpus_prefix, dir_crawler_sleep_time, jobQueue);
+        var directoryCrawler = new DirectoryCrawler(jobQueue);
         var directoryCrawlerThread = new Thread(directoryCrawler);
         directoryCrawlerThread.start();
 
         var fileRetriever = new FileRetriever();
-        var webRetriever = new WebRetriever(url_refresh_time);
+        var webRetriever = new WebRetriever();
 
-        var fileScanThreadPool = new FileScanThreadPool(file_scanning_size_limit, keywords, fileRetriever);
-        var webScanThreadPool = new WebScanThreadPool(jobQueue, webRetriever, keywords);
+        var fileScanThreadPool = new FileScanThreadPool(fileRetriever);
+        var webScanThreadPool = new WebScanThreadPool(jobQueue, webRetriever);
 
         webRetriever.setWebScanThreadPool(webScanThreadPool);
         webRetriever.deleteScannedUrls();
@@ -82,7 +67,7 @@ public class Main {
                     String urlString = command[1];
                     try {
                         new URL(command[1]);
-                        jobQueue.put(new WebJob(ScanType.WEB, urlString, JobStatus.RUNNING, hop_count));
+                        jobQueue.put(new WebJob(ScanType.WEB, urlString, JobStatus.RUNNING, Config.getInstance().hop_count));
                     } catch (MalformedURLException | InterruptedException e) {
                         System.out.println(urlString + " is not a valid URL.");
                     }
@@ -109,7 +94,7 @@ public class Main {
             }
             else if (userInput.startsWith("query file|")) {
                 String directoryPath = userInput.split("\\|")[1];
-                Map<String, Integer> result = fileRetriever.getQueryResult("file|" + directoryPath);
+                Map<String, Integer> result = fileRetriever.queryResult("file|" + directoryPath);
                 if (!result.isEmpty()) {
                     for (Map.Entry<String, Integer> entry : result.entrySet()) {
                         System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
@@ -135,7 +120,7 @@ public class Main {
             }
             else if (userInput.startsWith("query web|")) {
                 String url = userInput.split("\\|")[1];
-                Map<String, Integer> result = webRetriever.getQueryResult("web|" + url);
+                Map<String, Integer> result = webRetriever.queryResult("web|" + url);
                 if (!result.isEmpty()) {
                     System.out.println(result);
                 }

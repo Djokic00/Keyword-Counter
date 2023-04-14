@@ -1,5 +1,6 @@
 package main.crawler;
 
+import main.application.Config;
 import main.enums.JobStatus;
 import main.job.FileJob;
 import main.enums.ScanType;
@@ -11,9 +12,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 
 public class DirectoryCrawler implements Runnable {
-
-    private String directoryPrefix;
-    private long dirCrawlerSleepTime;
     private final Map<File, Long> lastModifiedMap = new HashMap<>();
     private List<File> textCorpora = new ArrayList<>();
     private LinkedBlockingQueue<ScanningJob> jobQueue;
@@ -23,9 +21,7 @@ public class DirectoryCrawler implements Runnable {
     private volatile File newDirectory = null;
     private volatile boolean isRunning = true;
 
-    public DirectoryCrawler(String directoryPrefix, long dirCrawlerSleepTime, LinkedBlockingQueue<ScanningJob> jobQueue) {
-        this.directoryPrefix = directoryPrefix;
-        this.dirCrawlerSleepTime = dirCrawlerSleepTime;
+    public DirectoryCrawler(LinkedBlockingQueue<ScanningJob> jobQueue) {
         this.jobQueue = jobQueue;
     }
 
@@ -63,7 +59,7 @@ public class DirectoryCrawler implements Runnable {
                     }
                 }
 
-                Thread.sleep(dirCrawlerSleepTime);
+                Thread.sleep(Config.getInstance().dir_crawler_sleep_time);
 
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -75,7 +71,7 @@ public class DirectoryCrawler implements Runnable {
         if (rootDirectory.isDirectory()) {
             for (File file : rootDirectory.listFiles()) {
                 if (file.isDirectory()) {
-                    if (file.getName().startsWith(directoryPrefix)) {
+                    if (file.getName().startsWith(Config.getInstance().file_corpus_prefix)) {
                         textCorpora.add(file);
                         findTextCorpora(file);
                     }

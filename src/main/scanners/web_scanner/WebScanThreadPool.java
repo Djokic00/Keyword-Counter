@@ -1,5 +1,6 @@
 package main.scanners.web_scanner;
 
+import main.application.Config;
 import main.enums.JobStatus;
 import main.job.ScanningJob;
 import main.job.WebJob;
@@ -16,12 +17,9 @@ public class WebScanThreadPool implements ScanThreadPool {
     BlockingQueue jobQueue;
     private WebRetriever webRetriever;
 
-    private List<String> keywords;
-
-    public WebScanThreadPool(BlockingQueue jobQueue, WebRetriever webRetriever, List<String> keywords) {
+    public WebScanThreadPool(BlockingQueue jobQueue, WebRetriever webRetriever) {
         this.jobQueue = jobQueue;
         this.webRetriever = webRetriever;
-        this.keywords = keywords;
     }
     @Override
     public void scheduleJob(ScanningJob job) {
@@ -34,7 +32,8 @@ public class WebScanThreadPool implements ScanThreadPool {
         String url = webJob.getQuery();
         int hopCount = webJob.getHopCount();
 
-        Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture = pool.submit(new WebProcessor(jobQueue, this, hopCount, url, keywords ));
+        Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture = pool.submit(
+                new WebProcessor(jobQueue, this, hopCount, url, Config.getInstance().keywords));
 
         webRetriever.addResult(url, totalOccurrencesFuture);
     }

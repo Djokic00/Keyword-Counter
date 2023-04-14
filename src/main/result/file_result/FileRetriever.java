@@ -39,10 +39,14 @@ public class FileRetriever implements ResultRetriever {
     }
 
     @Override
-    public Map<String, Integer> getQueryResult(String query) {
+    public Map<String, Integer> queryResult(String query) {
         String path = query.split("\\|")[1];
         Map<String, Integer> result = new HashMap<>();
         try {
+            if (fileResults.isEmpty()) {
+                System.out.println("Files are empty");
+                return result;
+            }
             if (fileResults.get(path) != null) {
                 Future<Map<String, Map<String, Integer>>> future = fileResults.get(path);
                 if (future.isDone()) {
@@ -65,6 +69,10 @@ public class FileRetriever implements ResultRetriever {
     @Override
     public Map<String, Map<String, Integer>> getSummary() {
         try {
+            if (fileResults.isEmpty()) {
+                System.out.println("Files are empty");
+                return null;
+            }
             if (resultSummaryCacheFile == null) {
                 System.out.println("Computing");
                 resultSummaryCacheFile = pool.submit(new FileRetrieverProcessor(fileResults));

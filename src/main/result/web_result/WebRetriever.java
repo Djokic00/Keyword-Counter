@@ -1,6 +1,6 @@
 package main.result.web_result;
 
-import main.enums.ScanType;
+import main.application.Config;
 import main.result.ResultRetriever;
 import main.scanners.web_scanner.WebScanThreadPool;
 
@@ -14,13 +14,11 @@ public class WebRetriever implements ResultRetriever {
     public ConcurrentHashMap<String, Future<Map<String, Map<String, Integer>>>> webResults;
     private ScheduledExecutorService executor;
     private WebScanThreadPool webScanThreadPool;
-    private long url_refresh_time;
 
-    public WebRetriever(long url_refresh_time) {
+    public WebRetriever() {
         this.webResults = new ConcurrentHashMap<>();
         this.pool = Executors.newCachedThreadPool();
         this.executor = Executors.newScheduledThreadPool(5);
-        this.url_refresh_time = url_refresh_time;
     }
 
     @Override
@@ -46,7 +44,7 @@ public class WebRetriever implements ResultRetriever {
     }
 
     @Override
-    public Map<String, Integer> getQueryResult(String query) {
+    public Map<String, Integer> queryResult(String query) {
         String path = query.split("\\|")[1];
         Map<String, Integer> result = new HashMap<>();
         try {
@@ -57,7 +55,7 @@ public class WebRetriever implements ResultRetriever {
                 System.out.println("Task is not done yet.");
             }
         } catch (InterruptedException | ExecutionException e) {
-
+            System.out.println("Task is not processed yet");
         }
         return result;
     }
@@ -104,7 +102,8 @@ public class WebRetriever implements ResultRetriever {
 
     public void deleteScannedUrls() {
         DeleteScannedURL deleteScannedURL = new DeleteScannedURL(this, webScanThreadPool);
-        executor.scheduleWithFixedDelay(deleteScannedURL, url_refresh_time,  url_refresh_time, TimeUnit.MILLISECONDS);
+        Config config = Config.getInstance();
+        executor.scheduleWithFixedDelay(deleteScannedURL, config.url_refresh_time, config.url_refresh_time, TimeUnit.MILLISECONDS);
     }
 
     public void setResultSummaryCacheWeb(Future<Map<String, Map<String, Integer>>> resultSummaryCacheWeb) {

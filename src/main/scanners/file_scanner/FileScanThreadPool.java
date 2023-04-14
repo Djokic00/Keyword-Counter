@@ -1,5 +1,6 @@
 package main.scanners.file_scanner;
 
+import main.application.Config;
 import main.enums.JobStatus;
 import main.job.FileJob;
 import main.job.ScanningJob;
@@ -12,14 +13,12 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 public class FileScanThreadPool implements ScanThreadPool {
-    private final int corpusSizeLimit;
-    private final List<String> keywords;
     private FileRetriever fileRetriever;
     private ForkJoinPool pool;
 
-    public FileScanThreadPool(int corpusSizeLimit, List<String> keywords, FileRetriever fileRetriever) {
-        this.corpusSizeLimit = corpusSizeLimit;
-        this.keywords = keywords;
+    private Config config = Config.getInstance();
+
+    public FileScanThreadPool(FileRetriever fileRetriever) {
         this.fileRetriever = fileRetriever;
         pool = new ForkJoinPool();
     }
@@ -38,7 +37,8 @@ public class FileScanThreadPool implements ScanThreadPool {
 
         File[] listFiles = directory.listFiles();
 
-        Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture = pool.submit(new FileProcessor(0, directorySize, corpusSizeLimit, listFiles, keywords));
+        Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture = pool.submit(
+                new FileProcessor(0, directorySize, config.file_scanning_size_limit, listFiles, config.keywords));
 
         System.out.println("File: " + directoryPath + ", file size: " + directorySize);
         fileRetriever.addResult(directory.getName(), totalOccurrencesFuture);

@@ -9,6 +9,8 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -55,12 +57,13 @@ public class WebProcessor implements Callable {
                         String url = link.attr("abs:href");
                         try {
                             URL u = new URL(url);
+                            u.toURI();
                             String domain = u.getHost();
                             if (domain.isEmpty()) return false;
                             jobQueue.put(new WebJob(ScanType.WEB, link.attr("abs:href"), JobStatus.RUNNING, hopCount - 1));
                             return true;
-                        } catch (IOException | InterruptedException e) {
-
+                        } catch (URISyntaxException | MalformedURLException | InterruptedException e) {
+                            System.out.println("Url not valid: " + url);
                         }
                         return false;
                     });

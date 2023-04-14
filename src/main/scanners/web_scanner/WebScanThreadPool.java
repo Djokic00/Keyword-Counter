@@ -3,7 +3,7 @@ package main.scanners.web_scanner;
 import main.enums.JobStatus;
 import main.job.ScanningJob;
 import main.job.WebJob;
-import main.result.ResultRetrieverThreadPool;
+import main.result.web_result.WebRetriever;
 import main.scanners.ScanThreadPool;
 
 import java.util.List;
@@ -14,13 +14,13 @@ public class WebScanThreadPool implements ScanThreadPool {
     private ExecutorService pool = Executors.newCachedThreadPool();
     public ConcurrentHashMap<String, Boolean> processedLinks = new ConcurrentHashMap<>();
     BlockingQueue jobQueue;
-    private ResultRetrieverThreadPool retrieverThreadPool;
+    private WebRetriever webRetriever;
 
     private List<String> keywords;
 
-    public WebScanThreadPool(BlockingQueue jobQueue, ResultRetrieverThreadPool retrieverThreadPool, List<String> keywords) {
+    public WebScanThreadPool(BlockingQueue jobQueue, WebRetriever webRetriever, List<String> keywords) {
         this.jobQueue = jobQueue;
-        this.retrieverThreadPool = retrieverThreadPool;
+        this.webRetriever = webRetriever;
         this.keywords = keywords;
     }
     @Override
@@ -36,6 +36,6 @@ public class WebScanThreadPool implements ScanThreadPool {
 
         Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture = pool.submit(new WebProcessor(jobQueue, this, hopCount, url, keywords ));
 
-        retrieverThreadPool.addWebResult(url, totalOccurrencesFuture);
+        webRetriever.addResult(url, totalOccurrencesFuture);
     }
 }

@@ -3,7 +3,7 @@ package main.scanners.file_scanner;
 import main.enums.JobStatus;
 import main.job.FileJob;
 import main.job.ScanningJob;
-import main.result.ResultRetrieverThreadPool;
+import main.result.file_result.FileRetriever;
 import main.scanners.ScanThreadPool;
 
 import java.io.File;
@@ -14,13 +14,13 @@ import java.util.concurrent.*;
 public class FileScanThreadPool implements ScanThreadPool {
     private final int corpusSizeLimit;
     private final List<String> keywords;
-    private ResultRetrieverThreadPool retrieverThreadPool;
+    private FileRetriever fileRetriever;
     private ForkJoinPool pool;
 
-    public FileScanThreadPool(int corpusSizeLimit, List<String> keywords, ResultRetrieverThreadPool retrieverThreadPool) {
+    public FileScanThreadPool(int corpusSizeLimit, List<String> keywords, FileRetriever fileRetriever) {
         this.corpusSizeLimit = corpusSizeLimit;
         this.keywords = keywords;
-        this.retrieverThreadPool = retrieverThreadPool;
+        this.fileRetriever = fileRetriever;
         pool = new ForkJoinPool();
     }
 
@@ -41,7 +41,7 @@ public class FileScanThreadPool implements ScanThreadPool {
         Future<Map<String, Map<String, Integer>>> totalOccurrencesFuture = pool.submit(new FileProcessor(0, directorySize, corpusSizeLimit, listFiles, keywords));
 
         System.out.println("File: " + directoryPath + ", file size: " + directorySize);
-        retrieverThreadPool.addFileResult(directory.getName(), totalOccurrencesFuture);
+        fileRetriever.addResult(directory.getName(), totalOccurrencesFuture);
     }
 
     private long getDirectorySize(File directory) {

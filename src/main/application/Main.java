@@ -6,7 +6,8 @@ import main.enums.ScanType;
 import main.dispatcher.JobDispatcher;
 import main.job.ScanningJob;
 import main.job.WebJob;
-import main.result.ResultRetrieverThreadPool;
+import main.result.file_result.FileRetriever;
+import main.result.web_result.WebRetriever;
 import main.scanners.file_scanner.FileScanThreadPool;
 import main.scanners.web_scanner.WebScanThreadPool;
 
@@ -40,13 +41,14 @@ public class Main {
         var directoryCrawlerThread = new Thread(directoryCrawler);
         directoryCrawlerThread.start();
 
-        var resultRetriever = new ResultRetrieverThreadPool(url_refresh_time);
+        var fileRetriever = new FileRetriever();
+        var webRetriever = new WebRetriever(url_refresh_time);
 
-        var fileScanThreadPool = new FileScanThreadPool(file_scanning_size_limit, keywords, resultRetriever);
-        var webScanThreadPool = new WebScanThreadPool(jobQueue, resultRetriever, keywords);
+        var fileScanThreadPool = new FileScanThreadPool(file_scanning_size_limit, keywords, fileRetriever);
+        var webScanThreadPool = new WebScanThreadPool(jobQueue, webRetriever, keywords);
 
-        resultRetriever.setWebScanThreadPool(webScanThreadPool);
-        resultRetriever.deleteScannedUrls();
+        webRetriever.setWebScanThreadPool(webScanThreadPool);
+        webRetriever.deleteScannedUrls();
 
         var jobDispatcher = new JobDispatcher(jobQueue, fileScanThreadPool, webScanThreadPool);
         var jobDispatcherThread = new Thread(jobDispatcher);
@@ -87,18 +89,18 @@ public class Main {
                 }
             }
             else if (userInput.startsWith("get file|summary")) {
-                Map<String, Map<String, Integer>> result = resultRetriever.getSummary(ScanType.FILE);
+                Map<String, Map<String, Integer>> result = fileRetriever.getSummary();
                 if (result != null && !result.isEmpty())
                     System.out.println(result);
             }
             else if (userInput.startsWith("query file|summary")) {
-                Map<String, Map<String, Integer>> result = resultRetriever.querySummary(ScanType.FILE);
+                Map<String, Map<String, Integer>> result = fileRetriever.querySummary();
                 if (result != null && !result.isEmpty())
                     System.out.println(result);
             }
             else if (userInput.startsWith("get file|")) {
                 String directoryPath = userInput.split("\\|")[1];
-                Map<String, Integer> result = resultRetriever.getResult("file|" + directoryPath);
+                Map<String, Integer> result = fileRetriever.getResult("file|" + directoryPath);
                 if (!result.isEmpty()) {
                     for (Map.Entry<String, Integer> entry : result.entrySet()) {
                         System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
@@ -107,7 +109,7 @@ public class Main {
             }
             else if (userInput.startsWith("query file|")) {
                 String directoryPath = userInput.split("\\|")[1];
-                Map<String, Integer> result = resultRetriever.getQueryResult("file|" + directoryPath);
+                Map<String, Integer> result = fileRetriever.getQueryResult("file|" + directoryPath);
                 if (!result.isEmpty()) {
                     for (Map.Entry<String, Integer> entry : result.entrySet()) {
                         System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
@@ -115,34 +117,34 @@ public class Main {
                 }
             }
             else if (userInput.startsWith("get web|summary")) {
-                Map<String, Map<String, Integer>> result = resultRetriever.getSummary(ScanType.WEB);
+                Map<String, Map<String, Integer>> result = webRetriever.getSummary();
                 if (result != null && !result.isEmpty())
                     System.out.println(result);
             }
             else if (userInput.startsWith("query web|summary")) {
-                Map<String, Map<String, Integer>> result = resultRetriever.querySummary(ScanType.WEB);
+                Map<String, Map<String, Integer>> result = webRetriever.querySummary();
                 if (result != null && !result.isEmpty())
                     System.out.println(result);
             }
             else if (userInput.startsWith("get web|")) {
                 String url = userInput.split("\\|")[1];
-                Map<String, Integer> result = resultRetriever.getResult("web|" + url);
+                Map<String, Integer> result = webRetriever.getResult("web|" + url);
                 if (!result.isEmpty()) {
                     System.out.println(result);
                 }
             }
             else if (userInput.startsWith("query web|")) {
                 String url = userInput.split("\\|")[1];
-                Map<String, Integer> result = resultRetriever.getQueryResult("web|" + url);
+                Map<String, Integer> result = webRetriever.getQueryResult("web|" + url);
                 if (!result.isEmpty()) {
                     System.out.println(result);
                 }
             }
             else if (userInput.startsWith("cfs")) {
-                resultRetriever.clearSummary(ScanType.FILE);
+                fileRetriever.clearSummary();
             }
             else if (userInput.startsWith("cws")) {
-                resultRetriever.clearSummary(ScanType.WEB);
+                webRetriever.clearSummary();
             }
             else if (userInput.equals("stop")) {
                 System.out.println("Stopping...");
@@ -156,7 +158,8 @@ public class Main {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                resultRetriever.stopPool();
+                fileRetriever.stopPool();
+                webRetriever.stopPool();
             }
             else {
                 System.out.println("Command does not exists");

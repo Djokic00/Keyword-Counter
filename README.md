@@ -1,5 +1,7 @@
 # KeywordCounter
 
+[Project specification](https://github.com/Djokic00/Keyword-Counter/blob/main/KiDS%20Domaći%201.pdf) - Project Specification is written in Serbian language.
+
 KeywordCounter is a Java application for counting occurrences of keywords in files and web pages. The application consists of four main components: File Scanner, Web Scanner, Result Retriever, and CLI. 
 
 - **File Scanner:** scans all files in a given directory and counts the occurrences of keywords.
